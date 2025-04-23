@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>rviz_embedded</name>
+  <version>0.0.1</version>
+  <description>The rviz_embedded package</description>
+  <maintainer email="user@todo.todo">maintainer</maintainer>
+  <license>TODO</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <buildtool_depend>cmake</buildtool_depend>
+  <build_depend>roscpp</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>qt5</build_depend>
+  <build_depend>rviz</build_depend>
+  <build_depend>roslib</build_depend>
+ <build_depend>yaml-cpp</build_depend>
+  <exec_depend>roscpp</exec_depend>
+  <exec_depend>qt5</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>yaml-cpp</exec_depend>
+  <exec_depend>rviz</exec_depend>
+  <exec_depend>roslib</exec_depend>
+  <export>
+    <!-- Other tools can request additional information be placed here -->
+  </export>
+</package>
