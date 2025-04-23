@@ -1,0 +1,34 @@
+controller_list:
+  - name: fake_Index_controller
+    type: $(arg fake_execution_type)
+    joints:
+      - joint_0_0
+      - joint_1_0
+      - joint_2_0
+  - name: fake_Middle_controller
+    type: $(arg fake_execution_type)
+    joints:
+      - joint_3_0
+      - joint_4_0
+      - joint_5_0
+  - name: fake_Thumb_controller
+    type: $(arg fake_execution_type)
+    joints:
+      - joint_6_0
+      - joint_7_0
+      - joint_8_0
+  - name: fake_HAND_controller
+    type: $(arg fake_execution_type)
+    joints:
+      - joint_0_0
+      - joint_1_0
+      - joint_2_0
+      - joint_3_0
+      - joint_4_0
+      - joint_5_0
+      - joint_6_0
+      - joint_7_0
+      - joint_8_0
+initial:  # Define initial robot poses per group
+  - group: HAND
+    pose: DEFAULT

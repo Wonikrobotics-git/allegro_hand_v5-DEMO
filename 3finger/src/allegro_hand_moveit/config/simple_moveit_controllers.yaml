@@ -1,0 +1,39 @@
+controller_list:
+  - name: Index_controller
+    action_ns: follow_joint_trajectory
+    type: FollowJointTrajectory
+    default: True
+    joints:
+      - joint_0_0
+      - joint_1_0
+      - joint_2_0
+  - name: Middle_controller
+    action_ns: follow_joint_trajectory
+    type: FollowJointTrajectory
+    default: True
+    joints:
+      - joint_3_0
+      - joint_4_0
+      - joint_5_0
+  - name: Thumb_controller
+    action_ns: follow_joint_trajectory
+    type: FollowJointTrajectory
+    default: True
+    joints:
+      - joint_6_0
+      - joint_7_0
+      - joint_8_0
+  - name: HAND_controller
+    action_ns: follow_joint_trajectory
+    type: FollowJointTrajectory
+    default: True
+    joints:
+      - joint_0_0
+      - joint_1_0
+      - joint_2_0
+      - joint_3_0
+      - joint_4_0
+      - joint_5_0
+      - joint_6_0
+      - joint_7_0
+      - joint_8_0
