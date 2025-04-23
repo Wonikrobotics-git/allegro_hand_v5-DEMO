@@ -1,0 +1,181 @@
+<launch>
+  <!--
+       Suggested arguments:
+          NUM:=0|1|...
+          CONTROLLER:=grasp|485
+          KEYBOARD:=true|false  (default is true)
+          AUTO_CAN:=true|false  (if true, ignores CAN_DEVICE argument and finds the can device automagically).
+          CAN_DEVICE:=/dev/pcanusb1 | /dev/pcanusbNNN  (ls -l /dev/pcan* to see open CAN devices)
+          VISUALIZE:=true|false  (Launch rviz)
+
+          RS485:=true|false
+          PORT:=/dev/ttyUSB0"/ | /dev/ttyUSBN (ls -l /dev/ttyUSB* to see open USB devices)
+       This script launches the following nodes:
+         - allegro hand controller (different controllers exist)
+         - keyboard controller
+         - state publisher (for TF information)
+
+       NOTE: If you specify the can device manually (CAN_DEVICE:=/dev/pcanusbN),
+             make sure you *also* specify AUTO_CAN:=false.
+
+  -->
+
+  <arg name="NUM" default="0"/>
+  <arg name ="RS485" default ="false"/>
+  <!-- Visualization with rviz, only if arg VISUALIZE is set to true. Default is
+       false, the allegro_viz.launch can be started separated. -->
+  <arg name ="VISUALIZE" default="false" />
+  <include file="$(find allegro_hand_controllers)/launch/allegro_viz.launch"
+           if="$(arg VISUALIZE)">
+    <arg name="NUM" value="$(arg NUM)"/>
+  </include>
+
+  <arg name ="MOVEIT" default="false" />
+
+  <include file="$(find allegro_hand_moveit)/launch/demo.launch" if="$(arg MOVEIT)">
+  <arg name="NUM" value="$(arg NUM)"/>
+  </include>
+
+  <arg name="CONTROLLER" default="grasp"/> <!-- grasp, 485  -->
+
+  <arg name="POLLING" default="true"/> <!-- true, false for polling the CAN communication -->
+
+  <!-- ls -l /dev/pcan* to see your open CAN ports. Auto means find it
+       automatically, and ignores the CAN_DEVICE argument. -->
+  <arg name="AUTO_CAN" default="true" />
+  <arg name="CAN_DEVICE" default="/dev/pcanusb1" />
+
+  <arg name="KEYBOARD" default="false" />
+
+  <!-- Load the robot description directly from the xacro file. (NOTE: store it
+       in two parameter names.) -->
+   <param name="robot_description"
+          command="cat $(find allegro_hand_description)/allegro_hand_description_3F.urdf"/>
+
+  
+
+  <arg name="GZP" default="false"/>  <!-- Gazebo 실행 여부 인자 추가 -->
+  <!-- Gazebo 실행, GZP가 true일 경우 실행 -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch" if="$(arg GZP)">
+    <arg name="world_name" value="$(find allegro_hand_description)/worlds/allegro.world"/>
+    <arg name="paused" value="false"/>
+    <arg name="use_sim_time" value="true"/>
+    <arg name="gui" value="true"/>
+  </include>
+
+  <!-- Gazebo에 로봇 스폰 -->
+  <node name="spawn_robot" pkg="gazebo_ros" type="spawn_model" if="$(arg GZP)"
+        args="-param robot_description -urdf -model allegro_hand -z 0.1"/>
+        
+  <!-- Allegro Hand controller and communication node. -->
+  <node name="allegroHand_$(arg NUM)"
+        pkg="allegro_hand_controllers"
+        type="allegro_node_$(arg CONTROLLER)"
+        output="screen"
+        args="$(arg POLLING)"
+        unless="$(arg RS485)"> 
+
+    <!-- Remapping of topics into enumerated allegroHand_# namespace -->
+    <remap from="allegroHand/joint_states" to="allegroHand_$(arg NUM)/joint_states"/>
+    <remap from="allegroHand/joint_cmd" to="allegroHand_$(arg NUM)/joint_cmd"/>
+    <remap from="allegroHand/lib_cmd" to="allegroHand_$(arg NUM)/lib_cmd"/>
+    <remap from="allegroHand/torque_cmd" to="allegroHand_$(arg NUM)/torque_cmd"/>
+    <remap from="allegroHand/envelop_torque" to="allegroHand_$(arg NUM)/envelop_torque"/>
+    <remap from="allegroHand/joint_current_states" to="allegroHand_$(arg NUM)/joint_current_states"/>
+    <remap from="allegroHand/joint_desired_states" to="allegroHand_$(arg NUM)/joint_desired_states"/>
+    <remap from="/timechange" to="allegroHand_$(arg NUM)/timechange"/>
+    <remap from="/forcechange" to="allegroHand_$(arg NUM)/forcechange"/>
+    <remap from="fingertip_sensors" to="allegroHand_$(arg NUM)/fingertip_sensors"/>
+    <remap from="fingertip_arrow_markers" to="allegroHand_$(arg NUM)/fingertip_arrow_markers"/>    
+
+
+    <!-- Set the CAN channel automatically (using detect_pcan.py) if the
+         AUTO_CAN parameter is true, otherwise use the CAN_DEVICE
+         argument. NOTE: To manually set the can device, you must *also* set
+         AUTO_CAN:=false. -->
+    <param name="/comm/CAN_CH" value="$(arg CAN_DEVICE)"
+           unless="$(arg AUTO_CAN)" />
+    <param name="/comm/CAN_CH"
+           command="$(find allegro_hand_description)/scripts/detect_pcan.py"
+           if="$(arg AUTO_CAN)" />
+  </node>
+
+
+  <!-- ls -l /dev/ttyUSB* to see your open USB ports. -->
+  <arg name="PORT" default="/dev/ttyUSB0"/>
+  <!-- Allegro Hand controller and communication node.(RS-485) -->
+  <node name="allegroHand485_$(arg NUM)"
+        pkg="allegro_hand_controllers"
+        type="allegro_node_485"
+        output="screen"
+        clear_params="true"
+        args="$(arg POLLING)"
+        if="$(arg RS485)"> 
+
+    <!-- Remapping of topics into enumerated allegroHand_# namespace -->
+    <remap from="allegroHand/lib_cmd" to="allegroHand_$(arg NUM)/lib_cmd"/>
+    <param name="/port_info/which_port" value="$(arg PORT)" />
+  </node>
+
+  <!-- Joint States (angles) to Joint Transforms -->
+  <node name="jointState2tf_$(arg NUM)"
+        pkg="robot_state_publisher"
+        output="screen" 
+        type="robot_state_publisher"
+        unless="$(arg GZP)">
+    <remap from="tf" to="allegroHand_$(arg NUM)/tf"/>
+    <remap from="joint_states" to="allegroHand_$(arg NUM)/joint_states"/>
+  </node>
+
+
+
+  <!-- Keyboard handler (if arg KEYBOARD is true) -->
+  <node name="keyboard_$(arg NUM)"
+        pkg="allegro_hand_keyboard"
+        type="allegro_hand_keyboard"
+        output="screen"
+        if="$(arg KEYBOARD)">
+    <remap from="allegroHand/lib_cmd" to="allegroHand_$(arg NUM)/lib_cmd"/>
+  </node>
+
+  <!-- GUI controller (if arg GUI is true) -->
+<arg name ="GUI" default="false" />
+
+  <node name="allegro_hand_gui_node"
+        pkg="allegro_hand_gui"
+        type="allegro_hand_gui_node"
+        output="screen"
+        if="$(arg GUI)">
+  <remap from="allegroHand/lib_cmd" to="allegroHand_$(arg NUM)/lib_cmd"/>
+  <remap from="allegroHand/joint_cmd" to="allegroHand_$(arg NUM)/joint_cmd"/>
+  <remap from="/timechange" to="allegroHand_$(arg NUM)/timechange"/>
+  <remap from="/forcechange" to="allegroHand_$(arg NUM)/forcechange"/>
+  </node>
+
+  <!-- QT TEST(전시회) (if arg GUI is true) -->
+<arg name ="DEMO" default="false" />
+
+  <node name="rviz_embedded_node_$(arg NUM)"
+        pkg="rviz_embedded" type="rviz_embedded_node"
+        args="-d $(find allegro_hand_description)/allegro_hand_qt_config.rviz" 
+        if="$(arg DEMO)">
+    <remap from="/tf" to="/allegroHand_$(arg NUM)/tf"/>
+    <remap from="fingertip_sensors" to="allegroHand_$(arg NUM)/fingertip_sensors"/>
+    <remap from="/finger_labels" to="allegroHand_$(arg NUM)/finger_labels"/>
+    <remap from="fingertip_arrow_markers" to="allegroHand_$(arg NUM)/fingertip_arrow_markers"/>      
+</node>
+
+<arg name ="MISSION" default="false" />
+
+  <node name="mission_node_$(arg NUM)"
+        pkg="allegro_hand_mission"
+        type="mission_node"
+        output="screen"
+        if="$(arg MISSION)">
+    <remap from="allegroHand/lib_cmd" to="allegroHand_$(arg NUM)/lib_cmd"/>
+    <remap from="allegroHand/forcechange" to="allegroHand_$(arg NUM)/forcechange"/>
+</node>
+
+
+
+</launch>
